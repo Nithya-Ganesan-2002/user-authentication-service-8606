@@ -44,8 +44,28 @@ app.use(express.json());
 // Mount routes
 app.use('/', routes);
 
+// OpenAPI docs helper for JWT usage
+app.get('/openapi.json', (req, res) => {
+  const host = req.get('host');
+  const protocol = req.secure ? 'https' : req.protocol;
+  const actualPort = req.socket.localPort;
+  const hasPort = host.includes(':');
+  const needsPort =
+    !hasPort &&
+    ((protocol === 'http' && actualPort !== 80) ||
+      (protocol === 'https' && actualPort !== 443));
+  const fullHost = needsPort ? `${host}:${actualPort}` : host;
+
+  const dynamicSpec = {
+    ...swaggerSpec,
+    servers: [{ url: `${protocol}://${fullHost}` }],
+  };
+  res.json(dynamicSpec);
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
+  // eslint-disable-next-line no-console
   console.error(err.stack);
   res.status(500).json({
     status: 'error',
